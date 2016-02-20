@@ -20,6 +20,7 @@ def regularized_train(
                     ):  
                               
     print "... parent network"
+    
     parent_filename_params          = parent_params["parent_filename_params"]
     parent_arch_params              = parent_params["parent_arch_params"]
     parent_optimization_params      = parent_params["parent_optimization_params"]
@@ -41,8 +42,23 @@ def regularized_train(
                         verbose = verbose )          
     parent_net.test( verbose = verbose )                                     
     parent_net.save_network ()                                   
-    
-
+    """ 
+    # Use this part of code, if the parent was trained elsewhere using samosa and saved.    
+    params_loaded, arch_params_loaded = load_network (  parent_filename_params ["network_save_name"] ,
+                                                        data_params = False, 
+                                                        optimization_params = False)   
+ 
+    # retrain is used to do the dataset some wierd experiments.     
+    parent_net = cnn_mlp(   filename_params = parent_filename_params,
+                            arch_params = arch_params_loaded,
+                            optimization_params = parent_optimization_params,
+                            retrain_params = None,
+                            init_params = params_loaded,
+                            verbose =verbose   )  
+                                                
+    parent_net.init_data ( dataset = dataset , outs = arch_params_loaded ["outs"], visual_params = visual_params, verbose = verbose )      
+    parent_net.build_network ( verbose = verbose )     
+    """ 
     print "... child network"        
     child_filename_params          = child_params["child_filename_params"]
     child_arch_params              = child_params["child_arch_params"]
@@ -68,15 +84,12 @@ def regularized_train(
                           
 ## Boiler Plate ## 
 if __name__ == '__main__':
-             
+
     if os.path.isfile('dump.txt'):
-        f = open('dump.txt', 'a')
-    else:
-        f = open('dump.txt', 'w')
-        f.close()
-        f.open ('dump.txt','a')
+        os.remove('dump.txt')
         
-    f.write("... main net")
+    f = open('dump.txt', 'w')        
+
     # run the base CNN as usual.              
     parent_filename_params = { 
                         "results_file_name"     : "../results/parent_results.txt",      
@@ -107,8 +120,8 @@ if __name__ == '__main__':
                             "mom_start"                         : 0.5,                      
                             "mom_end"                           : 0.99,
                             "mom_interval"                      : 100,
-                            "mom_type"                          : 1,                         
-                            "initial_learning_rate"             : 0.01,
+                            "mom_type"                          : 2,                         
+                            "initial_learning_rate"             : 0.001,
                             "ft_learning_rate"                  : 0.0001,    
                             "learning_rate_decay"               : 0.005,
                             "l1_reg"                            : 0.000,                     
@@ -118,28 +131,27 @@ if __name__ == '__main__':
                             "rms_rho"                           : 0.9,                      
                             "rms_epsilon"                       : 1e-7,                     
                             "fudge_factor"                      : 1e-7,                    
-                            "objective"                         : 0,    
+                            "objective"                         : 1,    
                             }        
 
     parent_arch_params = {
                     
-                            "squared_filter_length_limit"       : 15,   
-                            "mlp_activations"                   : [ ReLU ],
+                            "mlp_activations"                   : [ ReLU, ReLU, ReLU ],
                             "cnn_dropout"                       : False,
-                            "mlp_dropout"                       : False,
-                            "mlp_dropout_rates"                 : [ 0.5, 0.5 ],
-                            "num_nodes"                         : [ 800  ],                                     
+                            "mlp_dropout"                       : True,
+                            "mlp_dropout_rates"                 : [ 0.5, 0.5, 0.5, 0.5],
+                            "num_nodes"                         : [ 1200, 800, 400 ],                                     
                             "outs"                              : 10,                                                                                                                               
                             "svm_flag"                          : False,                                       
                             "cnn_activations"                   : [ ReLU,  ReLU  ],             
                             "cnn_batch_norm"                    : [ False, False ],
                             "mlp_batch_norm"                    : False,
-                            "nkerns"                            : [ 20,   50    ],              
+                            "nkerns"                            : [ ],              
                             "filter_size"                       : [ (5,5),(5,5) ],
                             "pooling_size"                      : [ (2,2),(2,2) ],
                             "conv_stride_size"                  : [ (1,1),(1,1) ],
                             "cnn_maxout"                        : [ 1,    1     ],                    
-                            "mlp_maxout"                        : [ 1  ],
+                            "mlp_maxout"                        : [ 1,    1,   1  ],
                             "cnn_dropout_rates"                 : [ 0.5,  0.5   ],
                             "random_seed"                       : 23455, 
                             "mean_subtract"                     : False,
@@ -170,17 +182,16 @@ if __name__ == '__main__':
                             
     child_arch_params = {
                     
-                    "squared_filter_length_limit"       : 15,   
                     "mlp_activations"                   : [ ReLU ],
                     "cnn_dropout"                       : False,
-                    "mlp_dropout"                       : False,
+                    "mlp_dropout"                       : True,
                     "mlp_dropout_rates"                 : [ 0.5 , 0.5 ],
-                    "num_nodes"                         : [ 800  ],                                     
+                    "num_nodes"                         : [ 400  ],                                     
                     "outs"                              : 10,                                                                                                                               
                     "svm_flag"                          : False,                                       
                     "cnn_activations"                   : [ ],             
                     "cnn_batch_norm"                    : [ ],
-                    "mlp_batch_norm"                    : False,
+                    "mlp_batch_norm"                    : True,
                     "nkerns"                            : [ ],              
                     "filter_size"                       : [ ],
                     "pooling_size"                      : [ ],
@@ -196,21 +207,21 @@ if __name__ == '__main__':
                  } 
                  
     joint_params  =  {                  
-                            "learn_layers"                      : [ (2 , 0) ],          # 0 is the first layer
+                            "learn_layers"                      : [ (3 , 0) ],          # 0 is the first layer
                             "learn_layers_coeffs"               : [ 1 ],                # this is just the coefficients    
                             "error"                             : cross_entropy_cost,   # erros of the probes. 
                             "learn_style"                       : 1,                    # learn_style 0  : parent and child learn together not operational yet.
                                                                                         # learn_style 1  : parent is learnt already in theano, child just learns
                                                                                         # learn_style 2  : parent is learnt in caffe, child just learns            
-                            "p"                                 : 1    # combination probability of hard and soft label
+                            "p"                                 : 0.5    # combination probability of hard and soft label
                                                                        # 2  p * soft  + (1-p) * hard                                
                       }
                       
                       
     # other loose parameters.     
-    parent_n_epochs = 5
+    parent_n_epochs = 100
     parent_validate_after_epochs = 1
-    parent_ft_epochs = 5
+    parent_ft_epochs = 100
     verbose = False  
     dataset = "_datasets/_dataset_57689"
     
