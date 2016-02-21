@@ -39,10 +39,10 @@ def build_probes(child, parent, joint_params, verbose = True):
         
     soft_output =  soft_dropout_output_cost if child.mlp_dropout else soft_output_cost
         
-    child_cost = 0                     
+    child_cost = 0.                     
     if not child.svm_flag is True:
         child_cost = p * soft_output + (1-p) * child.output
-
+    
     else:
         print "... code doesn't work for non SVM stuff."          
     
@@ -58,10 +58,12 @@ def build_probes(child, parent, joint_params, verbose = True):
     else:
         child_layers = child.MLPlayers.layers
     
+    probe_cost = 0.
     for probe in learn_layers:                            
-        child_cost = child_cost + learn_layers_coeffs[count] * error ( parent_layers[probe[0]].output, child_layers[probe[1]].output )
+        probe_cost = probe_cost + learn_layers_coeffs[count] * error ( parent_layers[probe[0]].output, child_layers[probe[1]].output )
         count = count + 1 
         
+    child_cost = child_cost + probe_cost         
     child_optimizer =  optimizer(     
                                     params = child.params,
                                     objective = child_cost,
@@ -71,5 +73,42 @@ def build_probes(child, parent, joint_params, verbose = True):
     child.epoch = child_optimizer.epoch
     child.updates = child_optimizer.updates
     child.mom = child_optimizer.mom
+    child.probe_cost = probe_cost
+    child.soft_output_cost = soft_output
+    child.obj_cost = child_cost        
     end_time = time.clock()
+    
+    assert child.batch_size == parent.batch_size
+    
+    index = T.lscalar('index')
+    child.probe_cost_fn = theano.function(
+                inputs= [index],
+                outputs = child.probe_cost,
+                givens={
+                    child.x: child.train_set_x[index * child.batch_size:(index + 1) * child.batch_size],
+                    child.y: child.train_set_y[index * child.batch_size:(index + 1) * child.batch_size],
+                    parent.x: child.train_set_x[index * child.batch_size:(index + 1) * child.batch_size],
+                    parent.y: child.train_set_y[index * child.batch_size:(index + 1) * child.batch_size]},
+                on_unused_input = 'ignore'                    
+                    )
+    child.soft_output_fn = theano.function(
+                inputs= [index],
+                outputs = child.soft_output_cost,
+                givens={
+                    child.x: child.train_set_x[index * child.batch_size:(index + 1) * child.batch_size],
+                    child.y: child.train_set_y[index * child.batch_size:(index + 1) * child.batch_size],
+                    parent.x: child.train_set_x[index * child.batch_size:(index + 1) * child.batch_size],
+                    parent.y: child.train_set_y[index * child.batch_size:(index + 1) * child.batch_size]},                    
+                on_unused_input = 'ignore'                    
+                    )
+    child.soft_obj_cost = theano.function(
+                inputs= [index],
+                outputs = child.soft_output_cost,
+                givens={
+                    child.x: child.train_set_x[index * child.batch_size:(index + 1) * child.batch_size],
+                    child.y: child.train_set_y[index * child.batch_size:(index + 1) * child.batch_size],
+                    parent.x: child.train_set_x[index * child.batch_size:(index + 1) * child.batch_size],
+                    parent.y: child.train_set_y[index * child.batch_size:(index + 1) * child.batch_size]},                    
+                on_unused_input = 'ignore'                    
+                    )      
     print "...         time taken is " +str(end_time - start_time) + " seconds"         

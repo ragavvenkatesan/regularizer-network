@@ -20,7 +20,7 @@ def regularized_train(
                     ):  
                               
     print "... parent network"
-    
+    """
     parent_filename_params          = parent_params["parent_filename_params"]
     parent_arch_params              = parent_params["parent_arch_params"]
     parent_optimization_params      = parent_params["parent_optimization_params"]
@@ -48,17 +48,23 @@ def regularized_train(
                                                         data_params = False, 
                                                         optimization_params = False)   
  
+    # This is dummy. Its only needed in cases where parent is also going to be retrained
+    # considering we aren't retraining make all copy_from_old true and we are good.
+    retrain_params = {
+                        "copy_from_old"     : [ True, True, True, True, True, True, True ],
+                        "freeze"            : [ True, True, True, True, True, True, False ]
+                    }  
     # retrain is used to do the dataset some wierd experiments.     
     parent_net = cnn_mlp(   filename_params = parent_filename_params,
                             arch_params = arch_params_loaded,
                             optimization_params = parent_optimization_params,
-                            retrain_params = None,
+                            retrain_params = retrain_params,
                             init_params = params_loaded,
                             verbose =verbose   )  
                                                 
     parent_net.init_data ( dataset = dataset , outs = arch_params_loaded ["outs"], visual_params = visual_params, verbose = verbose )      
     parent_net.build_network ( verbose = verbose )     
-    """ 
+    
     print "... child network"        
     child_filename_params          = child_params["child_filename_params"]
     child_arch_params              = child_params["child_arch_params"]
@@ -120,8 +126,8 @@ if __name__ == '__main__':
                             "mom_start"                         : 0.5,                      
                             "mom_end"                           : 0.99,
                             "mom_interval"                      : 100,
-                            "mom_type"                          : 2,                         
-                            "initial_learning_rate"             : 0.001,
+                            "mom_type"                          : 1,                         
+                            "initial_learning_rate"             : 0.01,
                             "ft_learning_rate"                  : 0.0001,    
                             "learning_rate_decay"               : 0.005,
                             "l1_reg"                            : 0.000,                     
@@ -136,48 +142,48 @@ if __name__ == '__main__':
 
     parent_arch_params = {
                     
-                            "mlp_activations"                   : [ ReLU, ReLU, ReLU ],
+                            "mlp_activations"                   : [  ReLU ],
                             "cnn_dropout"                       : False,
-                            "mlp_dropout"                       : True,
-                            "mlp_dropout_rates"                 : [ 0.5, 0.5, 0.5, 0.5],
-                            "num_nodes"                         : [ 1200, 800, 400 ],                                     
+                            "mlp_dropout"                       : False,
+                            "mlp_dropout_rates"                 : [ 0.5, 0.5],
+                            "num_nodes"                         : [ 400 ],                                     
                             "outs"                              : 10,                                                                                                                               
                             "svm_flag"                          : False,                                       
-                            "cnn_activations"                   : [ ReLU,  ReLU  ],             
-                            "cnn_batch_norm"                    : [ False, False ],
+                            "cnn_activations"                   : [ ReLU,   ReLU,   ReLU  ],             
+                            "cnn_batch_norm"                    : [ True,   True,   True ],
                             "mlp_batch_norm"                    : False,
-                            "nkerns"                            : [ ],              
-                            "filter_size"                       : [ (5,5),(5,5) ],
-                            "pooling_size"                      : [ (2,2),(2,2) ],
-                            "conv_stride_size"                  : [ (1,1),(1,1) ],
-                            "cnn_maxout"                        : [ 1,    1     ],                    
-                            "mlp_maxout"                        : [ 1,    1,   1  ],
-                            "cnn_dropout_rates"                 : [ 0.5,  0.5   ],
+                            "nkerns"                            : [ 20,     50,     50 ],              
+                            "filter_size"                       : [ (5,5),  (3,3),  (3,3) ],
+                            "pooling_size"                      : [ (2,2),  (2,2),  (1,1) ],
+                            "conv_stride_size"                  : [ (1,1),  (1,1),  (1,1) ],
+                            "cnn_maxout"                        : [ 1,      1,      1   ],                    
+                            "mlp_maxout"                        : [ 1,      1,      1   ],
+                            "cnn_dropout_rates"                 : [ 0.5,    0.5,    0.5   ],
                             "random_seed"                       : 23455, 
                             "mean_subtract"                     : False,
                             "use_bias"                          : True,
                             "max_out"                           : 0 
         
                  }                          
-    """
+    
     child_optimization_params = {
                             "mom_start"                         : 0.5,                      
                             "mom_end"                           : 0.99,
                             "mom_interval"                      : 100,
-                            "mom_type"                          : 0,                         
+                            "mom_type"                          : 1,                         
                             "initial_learning_rate"             : 0.01,
                             "ft_learning_rate"                  : 0.0001,    
                             "learning_rate_decay"               : 0.005,
                             "l1_reg"                            : 0.000,                     
                             "l2_reg"                            : 0.000,                    
                             "ada_grad"                          : False,
-                            "rms_prop"                          : False,
+                            "rms_prop"                          : True,
                             "rms_rho"                           : 0.9,                      
                             "rms_epsilon"                       : 1e-7,                     
                             "fudge_factor"                      : 1e-7,                    
-                            "objective"                         : 0,   
+                            "objective"                         : 1,   
                             }  
-    """
+    
     child_optimization_params = parent_optimization_params
                             
     child_arch_params = {
@@ -223,7 +229,7 @@ if __name__ == '__main__':
     parent_validate_after_epochs = 1
     parent_ft_epochs = 100
     verbose = False  
-    dataset = "_datasets/_dataset_57689"
+    dataset = "_datasets/_dataset_92291"
     
     if joint_params["learn_style"] > 0:
             child_n_epochs = parent_n_epochs = parent_n_epochs
