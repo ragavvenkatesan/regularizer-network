@@ -1,11 +1,11 @@
 #!/usr/bin/python
 import sys
-sys.path.insert(0, '/Users/ragav/GitHub/Convolutional-Neural-Networks/')
+sys.path.insert(0, '/home/ASUAD/rvenka10/Desktop/ragav/Convolutional-Neural-Networks/')
 
 from samosa.core import ReLU, Abs
 from samosa.util import load_network
 from samosa.cnn import cnn_mlp
-from compress import build_probes, l1_error, l2_error, cross_entropy_cost
+from compress import regularizer_net, l1_error, l2_error, cross_entropy_cost
 
 import os
 import pdb
@@ -33,7 +33,7 @@ def regularized_train(
                         retrain_params = parent_retrain_params,
                         init_params = parent_init_params,
                         verbose =verbose ) 
-    parent_net.init_data ( dataset = dataset , outs = parent_arch_params ["outs"], visual_params = visual_params, verbose = verbose )                                 
+    parent_net.init_data ( dataset = dataset[0] , outs = parent_arch_params ["outs"], visual_params = visual_params, verbose = verbose )                                 
     parent_net.build_network(verbose = verbose)                               
     
     parent_net.train(   n_epochs = parent_params["parent_n_epochs"], 
@@ -62,32 +62,35 @@ def regularized_train(
                             init_params = params_loaded,
                             verbose =verbose   )  
                                                 
-    parent_net.init_data ( dataset = dataset , outs = arch_params_loaded ["outs"], visual_params = visual_params, verbose = verbose )      
-    parent_net.build_network ( verbose = verbose )     
-    
+    parent_net.init_data ( dataset = dataset[0] , outs = arch_params_loaded ["outs"], visual_params = visual_params, verbose = verbose )      
+    parent_net.build_network ( verbose = verbose )       
+    parent_net.test( verbose = verbose )                                     
+           
     print "... child network"        
     child_filename_params          = child_params["child_filename_params"]
     child_arch_params              = child_params["child_arch_params"]
     child_optimization_params      = child_params["child_optimization_params"]
     child_retrain_params           = None
     child_init_params              = None                 
-    child_net = cnn_mlp(   
+    child_net = regularizer_net(   
                         filename_params = child_filename_params,
                         arch_params = child_arch_params,
                         optimization_params = child_optimization_params,
                         retrain_params = child_retrain_params,
                         init_params = child_init_params,
                         verbose =verbose ) 
-    child_net.init_data ( dataset = dataset , outs = child_arch_params ["outs"], visual_params = visual_params, verbose = verbose )                                 
-    child_net.build_network(verbose = verbose)                            
-    build_probes(child_net, parent_net, joint_params, verbose = verbose)                                                
+    child_net.init_data ( dataset = dataset[1] , outs = child_arch_params ["outs"], visual_params = visual_params, verbose = verbose )                                 
+    child_net.build_network(verbose = verbose)    
+    # I don't know why I need a return, isn't python always pass by reference ?                        
+    child_net.build_probes(parent = parent_net, joint_params = joint_params, verbose = verbose)                                           
     child_net.train(    n_epochs = child_params ["child_n_epochs"], 
                         ft_epochs = child_params ["child_ft_epochs"] ,
                         validate_after_epochs = child_params ["child_validate_after_epochs"],
                         verbose = verbose )          
     child_net.test( verbose = verbose )                                     
     child_net.save_network ()     
-                          
+      
+    pdb.set_trace()                                                          
 ## Boiler Plate ## 
 if __name__ == '__main__':
 
@@ -123,11 +126,9 @@ if __name__ == '__main__':
                                                                                                                                                       
 
     parent_optimization_params = {
-                            "mom_start"                         : 0.5,                      
-                            "mom_end"                           : 0.99,
-                            "mom_interval"                      : 100,
-                            "mom_type"                          : 1,                         
-                            "initial_learning_rate"             : 0.01,
+                            "mom"                               :( 0.5, 0.99, 100 ),                      
+                            "mom_type"                          : 2,                         
+                            "initial_learning_rate"             : 0.001,
                             "ft_learning_rate"                  : 0.0001,    
                             "learning_rate_decay"               : 0.005,
                             "l1_reg"                            : 0.000,                     
@@ -142,17 +143,17 @@ if __name__ == '__main__':
 
     parent_arch_params = {
                     
-                            "mlp_activations"                   : [  ReLU ],
-                            "cnn_dropout"                       : False,
-                            "mlp_dropout"                       : False,
-                            "mlp_dropout_rates"                 : [ 0.5, 0.5],
-                            "num_nodes"                         : [ 400 ],                                     
+                            "mlp_activations"                   : [  ReLU, ReLU, ReLU ],
+                            "cnn_dropout"                       : True,
+                            "mlp_dropout"                       : True,
+                            "mlp_dropout_rates"                 : [ 0.5, 0.5, 0.5, 0.5],
+                            "num_nodes"                         : [ 800, 800, 400 ],                                     
                             "outs"                              : 10,                                                                                                                               
                             "svm_flag"                          : False,                                       
-                            "cnn_activations"                   : [ ReLU,   ReLU,   ReLU  ],             
+                            "cnn_activations"                   : [  ],             
                             "cnn_batch_norm"                    : [ True,   True,   True ],
-                            "mlp_batch_norm"                    : False,
-                            "nkerns"                            : [ 20,     50,     50 ],              
+                            "mlp_batch_norm"                    : True,
+                            "nkerns"                            : [  ],              
                             "filter_size"                       : [ (5,5),  (3,3),  (3,3) ],
                             "pooling_size"                      : [ (2,2),  (2,2),  (1,1) ],
                             "conv_stride_size"                  : [ (1,1),  (1,1),  (1,1) ],
@@ -167,13 +168,11 @@ if __name__ == '__main__':
                  }                          
     
     child_optimization_params = {
-                            "mom_start"                         : 0.5,                      
-                            "mom_end"                           : 0.99,
-                            "mom_interval"                      : 100,
-                            "mom_type"                          : 1,                         
-                            "initial_learning_rate"             : 0.01,
-                            "ft_learning_rate"                  : 0.0001,    
-                            "learning_rate_decay"               : 0.005,
+                            "mom"                               : ( 0.5, 0.85, 100 ),
+                            "mom_type"                          : 2,                         
+                            "initial_learning_rate"             : 0.1,
+                            "ft_learning_rate"                  : 0.001,    
+                            "learning_rate_decay"               : 0.05,
                             "l1_reg"                            : 0.000,                     
                             "l2_reg"                            : 0.000,                    
                             "ada_grad"                          : False,
@@ -181,15 +180,13 @@ if __name__ == '__main__':
                             "rms_rho"                           : 0.9,                      
                             "rms_epsilon"                       : 1e-7,                     
                             "fudge_factor"                      : 1e-7,                    
-                            "objective"                         : 1,   
+                            "objective"                         : 1,      
                             }  
-    
-    child_optimization_params = parent_optimization_params
                             
     child_arch_params = {
                     
                     "mlp_activations"                   : [ ReLU ],
-                    "cnn_dropout"                       : False,
+                    "cnn_dropout"                       : True,
                     "mlp_dropout"                       : True,
                     "mlp_dropout_rates"                 : [ 0.5 , 0.5 ],
                     "num_nodes"                         : [ 400  ],                                     
@@ -207,38 +204,40 @@ if __name__ == '__main__':
                     "cnn_dropout_rates"                 : [ ],
                     "random_seed"                       : 23455, 
                     "mean_subtract"                     : False,
-                    "use_bias"                          : True,                    
+                    "use_bias"                          : False,                    
                     "max_out"                           : 0 
                     
                  } 
                  
     joint_params  =  {                  
-                            "learn_layers"                      : [ (3 , 0) ],          # 0 is the first layer
-                            "learn_layers_coeffs"               : [ 1 ],                # this is just the coefficients    
-                            "error"                             : cross_entropy_cost,   # erros of the probes. 
-                            "learn_style"                       : 1,                    # learn_style 0  : parent and child learn together not operational yet.
-                                                                                        # learn_style 1  : parent is learnt already in theano, child just learns
-                                                                                        # learn_style 2  : parent is learnt in caffe, child just learns            
-                            "p"                                 : 0.5    # combination probability of hard and soft label
-                                                                       # 2  p * soft  + (1-p) * hard                                
-                      }
+                            "learn_layers"                      : [ (2, 0) ],       # 0 is the first layer
+                            "learn_layers_coeffs"               : [ 
+                                                                    (0.95,0.2,100),    # This is probes
+                                                                    (0.75,0.75,100),   # This is soft outputs
+                                                                    (0.5,1,100)        # this is for hard labels
+                                                                     ],
+                                                                # weights for each probes and soft outputs and labels
+                                                                # first term is begining weight,
+                                                                # second term is ending weight,
+                                                                # third term is until which epoch.    
+                            "error"                             : l2_error,         # erros of the probes.
+                            "print_probe_costs"                 : True 
+                     }
                       
                       
     # other loose parameters.     
     parent_n_epochs = 100
     parent_validate_after_epochs = 1
     parent_ft_epochs = 100
+    child_n_epochs = parent_n_epochs = parent_n_epochs
+    child_validate_after_epochs = parent_validate_after_epochs
+    child_ft_epochs = parent_ft_epochs
+        
     verbose = False  
-    dataset = "_datasets/_dataset_92291"
-    
-    if joint_params["learn_style"] > 0:
-            child_n_epochs = parent_n_epochs = parent_n_epochs
-            child_validate_after_epochs = parent_validate_after_epochs
-            child_ft_epochs = parent_ft_epochs
-    else:
-            child_n_epochs = 5
-            child_validate_after_epochs = 1
-            child_ft_epochs = 5
+    parent_dataset = "_datasets/_dataset_24340"
+    child_dataset = "_datasets/_dataset_96494"
+
+
 
 
     # Don't edit            
@@ -265,7 +264,7 @@ if __name__ == '__main__':
                             child_params = child_params, 
                             joint_params = joint_params,
                             visual_params = visual_params,
-                            dataset = dataset,
+                            dataset = (parent_dataset, child_dataset),
                             verbose = verbose
                     ) 
     pdb.set_trace()                                
