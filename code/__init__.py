@@ -150,7 +150,7 @@ if __name__ == '__main__':
                         "error_file_name"       : "../results/parent_error.txt",
                         "cost_file_name"        : "../results/parent_cost.txt",
                         "confusion_file_name"   : "../results/parent_confusion.txt",
-                        "network_save_name"     : "../results/parent_network.pkl.gz "
+                        "network_save_name"     : "../results/parent_network.pkl "
                     }
 
     child_filename_params = { 
@@ -158,7 +158,7 @@ if __name__ == '__main__':
                         "error_file_name"       : "../results/child_error.txt",
                         "cost_file_name"        : "../results/child_cost.txt",
                         "confusion_file_name"   : "../results/child_confusion.txt",
-                        "network_save_name"     : "../results/child_network.pkl.gz "
+                        "network_save_name"     : "../results/child_network.pkl "
                     }
                                       
     visual_params = {
@@ -171,9 +171,9 @@ if __name__ == '__main__':
                                                                                                                                                       
 
     parent_optimization_params = {        
-                            "mom"                         	    : (0.5, 0.85, 100),     # (mom_start, momentum_end, momentum_interval)                     
-                            "mom_type"                          : 1,                    # 0-no mom, 1-polyak, 2-nestrov          
-                            "learning_rate"                     : (0.1,0.001, 0.05 ),          # (initial_learning_rate, ft_learning_rate, annealing)
+                            "mom"                         	    : (0.5, 0.85, 100),    # (mom_start, momentum_end, momentum_interval)                     
+                            "mom_type"                          : 1,                   # 0-no mom, 1-polyak, 2-nestrov          
+                            "learning_rate"                     : (0.1,0.001, 0.05 ),  # (initial_learning_rate, ft_learning_rate, annealing)
                             "reg"                               : (0.000,0.000),       # l1_coeff, l2_coeff                                
                             "optim_type"                        : 2,                   # 0-SGD, 1-Adagrad, 2-RmsProp, 3-Adam
                             "objective"                         : 1,                   # 0-negative log likelihood, 1-categorical cross entropy, 2-binary cross entropy
@@ -213,11 +213,11 @@ if __name__ == '__main__':
     child_optimization_params = {
         
                             "mom"                         	    : (0.5, 0.85, 100),     # (mom_start, momentum_end, momentum_interval)                     
-                            "mom_type"                          : 1,                    # 0-no mom, 1-polyak, 2-nestrov          
-                            "learning_rate"                     : (0.01,0.001, 0.05 ),          # (initial_learning_rate, ft_learning_rate, annealing)
+                            "mom_type"                          : 2,                    # 0-no mom, 1-polyak, 2-nestrov          
+                            "learning_rate"                     : (0.001,0.0001, 0.05 ),          # (initial_learning_rate, ft_learning_rate, annealing)
                             "reg"                               : (0.000,0.000),       # l1_coeff, l2_coeff                                
-                            "optim_type"                        : 2,                   # 0-SGD, 1-Adagrad, 2-RmsProp, 3-Adam
-                            "objective"                         : 1,                   # 0-negative log likelihood, 1-categorical cross entropy, 2-binary cross entropy
+                            "optim_type"                        : 0,                   # 0-SGD, 1-Adagrad, 2-RmsProp, 3-Adam
+                            "objective"                         : 0,                   # 0-negative log likelihood, 1-categorical cross entropy, 2-binary cross entropy
                               
                                 }  
                             
@@ -230,27 +230,27 @@ if __name__ == '__main__':
                             "num_nodes"                         : [ 4096, 4096 ],                                     
                             "outs"                              : 102,                                                                                                                               
                             "svm_flag"                          : False,                                       
-                            "cnn_activations"                   : [ ReLU,   ReLU,   ReLU,   ReLU  ],             
-                            "cnn_batch_norm"                    : [ False,  True,   True,   True  ],
+                            "cnn_activations"                   : [ ReLU,   ReLU,   ReLU,   ReLU,   ReLU,   ],             
+                            "cnn_batch_norm"                    : [ False,  True,   True,   True,   True,   ],
                             "mlp_batch_norm"                    : True,
-                            "nkerns"                            : [  64,    128,    256,    512   ],              
-                            "filter_size"                       : [ (3,3),  (3,3),  (3,3),  (3,3) ],
-                            "pooling_size"                      : [ (1,1),  (2,2),  (2,2),  (2,2) ],
-                            "conv_pad"                          : [ 2,      0,      0,      0     ],                            
-                            "pooling_type"                      : [ 1,      1,      1,      1     ],
-                            "maxrandpool_p"                     : [ 1,      1,      1,      1,    ],                           
-                            "conv_stride_size"                  : [ (1,1),  (2,2),  (2,2),  (2,2) ],
-                            "cnn_maxout"                        : [ 1,      1,      1,      1,    ],                    
-                            "mlp_maxout"                        : [ 1,      1,      1,      1,    ],
-                            "cnn_dropout_rates"                 : [ 0,    0.5,    0.5,    0.5   ],
-                            "random_seed"                       : 23455, 
+                            "nkerns"                            : [  64,    64,     128,    128,    256,    ],              
+                            "filter_size"                       : [ (3,3),  (3,3),  (3,3),  (3,3),  (3,3),  ],
+                            "pooling_size"                      : [ (1,1),  (3,3),  (2,2),  (3,3),  (2,2),  ],
+                            "conv_pad"                          : [ 2,      0,      0,      0,      2,      ],                            
+                            "pooling_type"                      : [ 1,      1,      1,      1,      1,      ],
+                            "maxrandpool_p"                     : [ 1,      1,      1,      1,      1,      ],                           
+                            "conv_stride_size"                  : [ (1,1),  (1,1),  (1,1),  (1,1),  (1,1),  ],
+                            "cnn_maxout"                        : [ 1,      1,      1,      1,      1,      ],                    
+                            "mlp_maxout"                        : [ 1,      1,      1,      1,      1,      ],
+                            "cnn_dropout_rates"                 : [ 0,    0.5,    0.5,    0.5,      0.5,    ],
+                            "random_seed"                       : 23455,
                             "mean_subtract"                     : False,
                             "use_bias"                          : True,
                             "max_out"                           : 0 
                  } 
                  
     joint_params  =  {                  
-                            "learn_layers"                      : [ (0, 0),  (16,4), (17,5) ],       # 0 is the first layer
+                            "learn_layers"                      : [ (0, 0), (16,5), (17,6) ],       # 0 is the first layer
                             "learn_layers_coeffs"               : [ 
                                                                     (1,0,75),     # This is probes
                                                                     (0,0,100),    # This is soft outputs
@@ -266,16 +266,16 @@ if __name__ == '__main__':
                       
                       
     # other loose parameters.     
-    parent_n_epochs = 100
+    parent_n_epochs = 2
     parent_validate_after_epochs = 1
-    parent_ft_epochs = 0
+    parent_ft_epochs = 2
     child_n_epochs = parent_n_epochs
     child_validate_after_epochs = parent_validate_after_epochs
     child_ft_epochs = parent_ft_epochs
         
     verbose = True  
-    parent_dataset = "_datasets/_dataset_88377"
-    child_dataset = "_datasets/_dataset_88377"
+    parent_dataset = "_datasets/_dataset_76223"
+    child_dataset = "_datasets/_dataset_76223"
 
     # Don't edit            
     parent_params  =  {
@@ -310,7 +310,7 @@ if __name__ == '__main__':
                         "error_file_name"       : "../results/solo_error_small.txt",
                         "cost_file_name"        : "../results/solo_cost_small.txt",
                         "confusion_file_name"   : "../results/solo_confusion_small.txt",
-                        "network_save_name"     : "../results/solo_network.pkl.gz "
+                        "network_save_name"     : "../results/solo_network.pkl "
                     }   
     
     solo(
