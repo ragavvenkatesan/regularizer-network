@@ -22,6 +22,8 @@ def solo(
                     validate_after_epochs = 1,
                     verbose = False, 
            ):            
+           
+    print "solo network"
                
     net = cnn_mlp(   filename_params = filename_params,
                      arch_params = arch_params,
@@ -49,7 +51,7 @@ def regularized_train(
                     verbose = False, 
                     ):  
                               
-    print "... parent network"
+    print "parent network"
     
     model = './dataset/vgg/vgg19.pkl'  # if vgg being loaded 
     freeze_layer_params = True           
@@ -113,7 +115,7 @@ def regularized_train(
     parent_net.init_data ( dataset = dataset[1] , outs = parent_arch_params ["outs"], visual_params = visual_params, verbose = verbose )          
     parent_net.build_network ( verbose = verbose )          
        
-    print "... child network"        
+    print "child network"        
     child_filename_params          = child_params["child_filename_params"]
     child_arch_params              = child_params["child_arch_params"]
     child_optimization_params      = child_params["child_optimization_params"]
@@ -134,7 +136,8 @@ def regularized_train(
                         validate_after_epochs = child_params ["child_validate_after_epochs"],
                         verbose = verbose )
     child_net.save_network ()                                       
-    child_net.test( verbose = verbose )                                     
+    child_net.test( verbose = verbose ) 
+    parent_net.save_network()                                    
     pdb.set_trace()   
 ## Boiler Plate ## 
 if __name__ == '__main__':
@@ -171,12 +174,12 @@ if __name__ == '__main__':
                                                                                                                                                       
 
     parent_optimization_params = {        
-                            "mom"                         	    : (0.5, 0.85, 100),    # (mom_start, momentum_end, momentum_interval)                     
+                            "mom"                         	    : (0.5, 0.85, 30),    # (mom_start, momentum_end, momentum_interval)                     
                             "mom_type"                          : 1,                   # 0-no mom, 1-polyak, 2-nestrov          
-                            "learning_rate"                     : (0.1,0.001, 0.05 ),  # (initial_learning_rate, ft_learning_rate, annealing)
+                            "learning_rate"                     : (0.001,0.001, 0.05 ),  # (initial_learning_rate, ft_learning_rate, annealing)
                             "reg"                               : (0.000,0.000),       # l1_coeff, l2_coeff                                
                             "optim_type"                        : 2,                   # 0-SGD, 1-Adagrad, 2-RmsProp, 3-Adam
-                            "objective"                         : 1,                   # 0-negative log likelihood, 1-categorical cross entropy, 2-binary cross entropy
+                            "objective"                         : 0,                   # 0-negative log likelihood, 1-categorical cross entropy, 2-binary cross entropy
                             }        
 
     parent_arch_params = {
@@ -212,49 +215,49 @@ if __name__ == '__main__':
     
     child_optimization_params = {
         
-                            "mom"                         	    : (0.5, 0.85, 100),     # (mom_start, momentum_end, momentum_interval)                     
-                            "mom_type"                          : 2,                    # 0-no mom, 1-polyak, 2-nestrov          
-                            "learning_rate"                     : (0.001,0.0001, 0.05 ),          # (initial_learning_rate, ft_learning_rate, annealing)
-                            "reg"                               : (0.000,0.000),       # l1_coeff, l2_coeff                                
-                            "optim_type"                        : 0,                   # 0-SGD, 1-Adagrad, 2-RmsProp, 3-Adam
+                            "mom"                         	    : (0.5, 0.85, 30),     # (mom_start, momentum_end, momentum_interval)                     
+                            "mom_type"                          : 2,                   # 0-no mom, 1-polyak, 2-nestrov          
+                            "learning_rate"                     : (0.0001,0.000001, 0.005 ), # (initial_learning_rate, ft_learning_rate, annealing)
+                            "reg"                               : (0.0,0.0),           # l1_coeff, l2_coeff                                
+                            "optim_type"                        : 1,                   # 0-SGD, 1-Adagrad, 2-RmsProp, 3-Adam
                             "objective"                         : 0,                   # 0-negative log likelihood, 1-categorical cross entropy, 2-binary cross entropy
                               
                                 }  
                             
     child_arch_params = {
                     
-                            "mlp_activations"                   : [  ReLU, ReLU ],
-                            "cnn_dropout"                       : False,
-                            "mlp_dropout"                       : True,
-                            "mlp_dropout_rates"                 : [ 0.5,  0.5, 0.5],
-                            "num_nodes"                         : [ 4096, 4096 ],                                     
-                            "outs"                              : 102,                                                                                                                               
-                            "svm_flag"                          : False,                                       
-                            "cnn_activations"                   : [ ReLU,   ReLU,   ReLU,   ReLU,   ReLU,   ],             
-                            "cnn_batch_norm"                    : [ False,  True,   True,   True,   True,   ],
-                            "mlp_batch_norm"                    : True,
-                            "nkerns"                            : [  64,    64,     128,    128,    256,    ],              
-                            "filter_size"                       : [ (3,3),  (3,3),  (3,3),  (3,3),  (3,3),  ],
-                            "pooling_size"                      : [ (1,1),  (3,3),  (2,2),  (3,3),  (2,2),  ],
-                            "conv_pad"                          : [ 2,      0,      0,      0,      2,      ],                            
-                            "pooling_type"                      : [ 1,      1,      1,      1,      1,      ],
-                            "maxrandpool_p"                     : [ 1,      1,      1,      1,      1,      ],                           
-                            "conv_stride_size"                  : [ (1,1),  (1,1),  (1,1),  (1,1),  (1,1),  ],
-                            "cnn_maxout"                        : [ 1,      1,      1,      1,      1,      ],                    
-                            "mlp_maxout"                        : [ 1,      1,      1,      1,      1,      ],
-                            "cnn_dropout_rates"                 : [ 0,    0.5,    0.5,    0.5,      0.5,    ],
-                            "random_seed"                       : 23455,
-                            "mean_subtract"                     : False,
-                            "use_bias"                          : True,
-                            "max_out"                           : 0 
+                    "mlp_activations"                   : [  ReLU, ReLU ],
+                    "cnn_dropout"                       : False,
+                    "mlp_dropout"                       : True,
+                    "mlp_dropout_rates"                 : [ 0.5,  0.5, 0.5],
+                    "num_nodes"                         : [ 4096, 4096 ],                                     
+                    "outs"                              : 102,                                                                                                                               
+                    "svm_flag"                          : False,                                       
+                    "cnn_activations"                   : [ ReLU,   ReLU,   ReLU,   ReLU,   ReLU,   ],             
+                    "cnn_batch_norm"                    : [ False,  True,   True,   True,   True,   ],
+                    "mlp_batch_norm"                    : True,
+                    "nkerns"                            : [  64,    64,     128,    128,    256,    ],              
+                    "filter_size"                       : [ (3,3),  (3,3),  (3,3),  (3,3),  (3,3),  ],
+                    "pooling_size"                      : [ (1,1),  (3,3),  (3,3),  (2,2),  (2,2),  ],
+                    "conv_pad"                          : [ 2,      0,      0,      0,      0,      ],                            
+                    "pooling_type"                      : [ 1,      1,      1,      1,      1,      ],
+                    "maxrandpool_p"                     : [ 1,      1,      1,      1,      1,      ],                           
+                    "conv_stride_size"                  : [ (1,1),  (1,1),  (1,1),  (1,1),  (1,1),  ],
+                    "cnn_maxout"                        : [ 1,      1,      1,      1,      1,      ],                    
+                    "mlp_maxout"                        : [ 1,      1,      1,      1,      1,      ],
+                    "cnn_dropout_rates"                 : [ 0,      0,      0,      0,      0,      ],
+                    "random_seed"                       : 23455,
+                    "mean_subtract"                     : False,
+                    "use_bias"                          : True,
+                    "max_out"                           : 0 
                  } 
                  
     joint_params  =  {                  
-                            "learn_layers"                      : [ (0, 0), (16,5), (17,6) ],       # 0 is the first layer
+                            "learn_layers"                      : [ (0,0), (16,5), (17,6) ],       # 0 is the first layer
                             "learn_layers_coeffs"               : [ 
-                                                                    (1,0,75),     # This is probes
+                                                                    (1,0,30),     # This is probes
                                                                     (0,0,100),    # This is soft outputs
-                                                                    (1,1,100)     # this is for hard labels
+                                                                    (0.8,1,100)     # this is for hard labels
                                                                   ],
                                                                 # weights for each probes and soft outputs and labels
                                                                 # first term is begining weight,
@@ -266,16 +269,16 @@ if __name__ == '__main__':
                       
                       
     # other loose parameters.     
-    parent_n_epochs = 2
+    parent_n_epochs = 50
     parent_validate_after_epochs = 1
-    parent_ft_epochs = 2
+    parent_ft_epochs = 0
     child_n_epochs = parent_n_epochs
     child_validate_after_epochs = parent_validate_after_epochs
     child_ft_epochs = parent_ft_epochs
         
-    verbose = True  
-    parent_dataset = "_datasets/_dataset_76223"
-    child_dataset = "_datasets/_dataset_76223"
+    verbose = False  
+    parent_dataset = "_datasets/_dataset_22773"
+    child_dataset ="_datasets/_dataset_22773"
 
     # Don't edit            
     parent_params  =  {
@@ -295,16 +298,7 @@ if __name__ == '__main__':
                             "child_optimization_params"        : child_optimization_params,
                             "child_validate_after_epochs"      : child_validate_after_epochs
                       }                                       
-                                   
-    regularized_train (   
-                            parent_params = parent_params,
-                            child_params = child_params, 
-                            joint_params = joint_params,
-                            visual_params = visual_params,
-                            dataset = (parent_dataset, child_dataset),
-                            verbose = verbose
-                    ) 
-                                       
+                                                           
     solo_filename_params = { 
                         "results_file_name"     : "../results/solo_results_small.txt",      
                         "error_file_name"       : "../results/solo_error_small.txt",
@@ -325,4 +319,15 @@ if __name__ == '__main__':
                     verbose                 = verbose                                                
                 )
                                     
-    pdb.set_trace()                                
+    # pdb.set_trace()                                
+    
+    regularized_train (   
+                            parent_params = parent_params,
+                            child_params = child_params, 
+                            joint_params = joint_params,
+                            visual_params = visual_params,
+                            dataset = (parent_dataset, child_dataset),
+                            verbose = verbose
+                    ) 
+                    
+    pdb.set_trace()

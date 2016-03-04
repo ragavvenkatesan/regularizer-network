@@ -49,7 +49,7 @@ class regularizer_net(cnn_mlp):
             float(hard_output_coeffs[1]))   
                     
         start_time = time.clock()
-        print '... building the probes'
+        print 'building the probes'
         # setup child soft loss function
                 
         child_cost = 0.
@@ -182,7 +182,7 @@ class regularizer_net(cnn_mlp):
                             )             
                             
         end_time = time.clock()                                                                                                                             
-        print "...         time taken is " +str(end_time - start_time) + " seconds"         
+        print "time taken is " +str(end_time - start_time) + " seconds"         
         
     def validate(self, epoch, verbose = True):
         
@@ -202,9 +202,9 @@ class regularizer_net(cnn_mlp):
                 soft_label_cost = [self.soft_output_fn(i, epoch) for i in xrange(self.batches2train)]
                 label_cost = [self.label_cost(i, epoch) for i in xrange(self.batches2train)]
                                             
-            print "                         cost of probes      : " + str(numpy.mean(probe_cost)) + ", weight    : " + str(self.probe_weight(epoch))
-            print "                         cost of soft labels : " + str(numpy.mean(soft_label_cost))  + ", weight    : " + str(self.soft_weight(epoch))
-            print "                         cost of hard labels : " + str(numpy.mean(label_cost)) + ", weight    : " + str(self.hard_weight(epoch))
+            print "   cost of probes      : " + str(numpy.mean(probe_cost)) + ", weight    : " + str(self.probe_weight(epoch))
+            print "   cost of soft labels : " + str(numpy.mean(soft_label_cost))  + ", weight    : " + str(self.soft_weight(epoch))
+            print "   cost of hard labels : " + str(numpy.mean(label_cost)) + ", weight    : " + str(self.hard_weight(epoch))
             
             
     def test(self, verbose = True):
@@ -225,7 +225,7 @@ class regularizer_net(cnn_mlp):
                 soft_label_cost = [self.soft_output_fn(i, 0) for i in xrange(self.batches2train)]
                 label_cost = [self.label_cost(i, 0) for i in xrange(self.batches2train)]
                                             
-            print "                         cost of probes      : " + str(numpy.mean(probe_cost)) 
-            print "                         cost of soft labels : " + str(numpy.mean(soft_label_cost)) 
-            print "                         cost of hard labels : " + str(numpy.mean(label_cost))
+            print "   cost of probes      : " + str(numpy.mean(probe_cost)) 
+            print "   cost of soft labels : " + str(numpy.mean(soft_label_cost)) 
+            print "   cost of hard labels : " + str(numpy.mean(label_cost))
         
