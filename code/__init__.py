@@ -81,7 +81,7 @@ def regularized_train(
     parent_retrain_params           = None
     parent_init_params              = None
     
-           
+    """       
     parent_init_params, parent_arch_params = load_network (  parent_filename_params ["network_save_name"] ,
                                                         data_params = False, 
                                                         optimization_params = False)
@@ -92,7 +92,7 @@ def regularized_train(
                         "freeze"            : [ False, False, False, False, False,  ]
                     }  
                            
-    
+    """
     # Use this part if creating parent in samosa also.
     parent_net = cnn_mlp(   
                         filename_params = parent_filename_params,
@@ -127,6 +127,7 @@ def regularized_train(
     parent_net.save_network ()                          
     parent_net.test( verbose = verbose )                                                                                                                 
     parent_net.init_data ( dataset = dataset[1] , outs = parent_arch_params ["outs"], visual_params = visual_params, verbose = verbose )
+    
     # Use this part of code, if the parent was trained elsewhere using samosa and saved.        
 
       
@@ -210,10 +211,10 @@ if __name__ == '__main__':
                     "mlp_maxout"                        : [ 1,      1,           ],                    
                     "num_nodes"                         : [ 800,   800           ],                                     
                     "outs"                              : 100,  
-                    "mlp_batch_norm"                    : [ True ],                                                                                                                                                 
+                    "mlp_batch_norm"                    : [ False ],                                                                                                                                                 
                     "svm_flag"                          : False,                                       
                     "cnn_activations"                   : [ ReLU,   ReLU,        ],             
-                    "cnn_batch_norm"                    : [ True ],
+                    "cnn_batch_norm"                    : [ False ],
                     "nkerns"                            : [  20,    50,          ],              
                     "filter_size"                       : [ (5,5),  (3,3),       ],
                     "pooling_size"                      : [ (2,2),  (2,2),       ],
@@ -255,10 +256,10 @@ if __name__ == '__main__':
                     "mlp_maxout"                        : [ 1,      1      ],                    
                     "num_nodes"                         : [ 800,   800 ],                                     
                     "outs"                              : 10,  
-                    "mlp_batch_norm"                    : [ True ],                                                                                                                                                 
+                    "mlp_batch_norm"                    : [ False ],                                                                                                                                                 
                     "svm_flag"                          : False,                                       
                     "cnn_activations"                   : [   ReLU ],             
-                    "cnn_batch_norm"                    : [   True ],
+                    "cnn_batch_norm"                    : [   False ],
                     "nkerns"                            : [   20   ],              
                     "filter_size"                       : [  (5,5) ],
                     "pooling_size"                      : [  (2,2) ],
@@ -299,7 +300,7 @@ if __name__ == '__main__':
     child_ft_epochs = parent_ft_epochs
         
     verbose = False  
-    parent_dataset = "_datasets/_dataset_63800"
+    parent_dataset = "_datasets/_dataset_96736"
     child_dataset = "_datasets/_dataset_96736"
 
     # Don't edit            
