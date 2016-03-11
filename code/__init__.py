@@ -1,6 +1,6 @@
 #!/usr/bin/python
 import sys
-sys.path.insert(0, '/home/ASUAD/rvenka10/Desktop/ragav/Convolutional-Neural-Networks/')
+sys.path.insert(0, '/Users/ragav/GitHub/Convolutional-Neural-Networks/')
 
 from samosa.core import ReLU, Softmax
 from samosa.util import load_network
@@ -24,25 +24,41 @@ def solo(
            ):            
            
     print "solo network"
-               
+    """
+    # use this if solo was trained and you want to fine tune..
+    params_loaded, arch_params_loaded = load_network (  filename_params ["network_save_name"] ,
+                                                        data_params = False, 
+                                                        optimization_params = False)               
+    retrain_params = {
+                        "copy_from_old"     : [ True ] * (len(arch_params_loaded["nkerns"]) + len(arch_params_loaded["num_nodes"])+1),
+                        "freeze"            : [ False ] * (len(arch_params_loaded["nkerns"]) + len(arch_params_loaded["num_nodes"])+1)
+                    }
+    net = cnn_mlp(   filename_params = filename_params,
+                     arch_params = arch_params_loaded,
+                     optimization_params = optimization_params,
+                     retrain_params = retrain_params,
+                     init_params = params_loaded,
+                     verbose =verbose ) 
+                          
+    """       
     net = cnn_mlp(   filename_params = filename_params,
                      arch_params = arch_params,
                      optimization_params = optimization_params,
                      retrain_params = None,
                      init_params = None,
                      verbose =verbose ) 
+                     
     net.init_data ( dataset = dataset , outs = arch_params ["outs"], visual_params = visual_params, verbose = verbose )                                 
     net.build_network(verbose = verbose)  
     net.build_learner(verbose =verbose)                                                                                       
     net.train( n_epochs = n_epochs, 
                 ft_epochs = ft_epochs,
                  validate_after_epochs = validate_after_epochs,
-                 patience_epochs = 5,                 
+                 patience_epochs = 1,                 
                  verbose = verbose )   
     net.test( verbose = verbose )                                     
     net.save_network ()   
              
-    pdb.set_trace()                       
                            
 def regularized_train( 
                     parent_params,
@@ -54,17 +70,29 @@ def regularized_train(
                     ):  
                               
     print "parent network"
-    
+    """
     model = './dataset/vgg/vgg19.pkl'  # if vgg being loaded 
     freeze_layer_params = True           
-                           
+    """                       
     
     parent_filename_params          = parent_params["parent_filename_params"]
     parent_arch_params              = parent_params["parent_arch_params"]
     parent_optimization_params      = parent_params["parent_optimization_params"]
     parent_retrain_params           = None
     parent_init_params              = None
-    """    
+    
+           
+    parent_init_params, parent_arch_params = load_network (  parent_filename_params ["network_save_name"] ,
+                                                        data_params = False, 
+                                                        optimization_params = False)
+    # This is dummy. Its only needed in cases where parent is also going to be retrained
+    # considering we aren't retraining make all copy_from_old true and we are good.
+    parent_retrain_params = {
+                        "copy_from_old"     : [ True, True, True, True, True, ],
+                        "freeze"            : [ False, False, False, False, False,  ]
+                    }  
+                           
+    
     # Use this part if creating parent in samosa also.
     parent_net = cnn_mlp(   
                         filename_params = parent_filename_params,
@@ -86,36 +114,22 @@ def regularized_train(
                            )     
                     
     # use this if fine tuning VGG network.
-             
-    parent_net.init_data ( dataset = dataset[1] , outs = parent_arch_params ["outs"], visual_params = visual_params, verbose = verbose )                                                
+    """                                          
+    parent_net.init_data ( dataset = dataset[0] , outs = parent_arch_params ["outs"], visual_params = visual_params, verbose = verbose )                                                
     parent_net.build_network(verbose = verbose)  
-    """                                 
+    parent_net.build_learner(verbose =verbose)     
+                                                                                     
     parent_net.train(   n_epochs = parent_params["parent_n_epochs"], 
                         ft_epochs = parent_params ["parent_ft_epochs"],
                         validate_after_epochs = parent_params ["parent_validate_after_epochs"],
-                        verbose = verbose )  
-    parent_net.save_network ()                        
+                        verbose = verbose )
+                         
+    parent_net.save_network ()                          
     parent_net.test( verbose = verbose )                                                                                                                 
-    """
+    parent_net.init_data ( dataset = dataset[1] , outs = parent_arch_params ["outs"], visual_params = visual_params, verbose = verbose )
     # Use this part of code, if the parent was trained elsewhere using samosa and saved.        
-    """  
-    params_loaded, arch_params_loaded = load_network (  parent_filename_params ["network_save_name"] ,
-                                                        data_params = False, 
-                                                        optimization_params = False)
-    # This is dummy. Its only needed in cases where parent is also going to be retrained
-    # considering we aren't retraining make all copy_from_old true and we are good.
-    retrain_params = {
-                        "copy_from_old"     : [ True, True, True, True, True, True, True ],
-                        "freeze"            : [ False, False, False, False, False, False, False ]
-                    }  
-    # retrain is used to do the dataset some wierd experiments.     
-    parent_net = cnn_mlp(   filename_params = parent_filename_params,
-                            arch_params = arch_params_loaded,
-                            optimization_params = parent_optimization_params,
-                            retrain_params = retrain_params,
-                            init_params = params_loaded,
-                            verbose =verbose   )  
-    """                                            
+
+      
                             
     print "child network"        
     child_filename_params          = child_params["child_filename_params"]
@@ -129,19 +143,21 @@ def regularized_train(
                         optimization_params = child_optimization_params,
                         retrain_params = child_retrain_params,
                         init_params = child_init_params,
+                        parent = parent_net,
+                        joint_params = joint_params,                         
                         verbose =verbose )                      
     child_net.init_data ( dataset = dataset[1] , outs = child_arch_params ["outs"], visual_params = visual_params, verbose = verbose )                                 
     child_net.build_network(verbose = verbose)  
     # build probes also builds the learer Don't bother calling a build learner.     
-    child_net.build_probes(parent = parent_net, joint_params = joint_params, verbose = verbose)    
+    child_net.build_probes(verbose = verbose)    
     child_net.train(    n_epochs = child_params ["child_n_epochs"], 
                         ft_epochs = child_params ["child_ft_epochs"] ,
                         validate_after_epochs = child_params ["child_validate_after_epochs"],
-                        patience_epochs = 1,
+                        patience_epochs = 2,
                         verbose = verbose )
     child_net.save_network ()                                       
     child_net.test( verbose = verbose ) 
-    parent_net.save_network()                                    
+    child_net.save_network()                                    
 
 ## Boiler Plate ## 
 if __name__ == '__main__':
@@ -179,38 +195,56 @@ if __name__ == '__main__':
 
     parent_optimization_params = {  
                             "mom"                         	    : (0.5, 0.9, 50),    # (mom_start, momentum_end, momentum_interval)                     
-                            "mom_type"                          : 0,                   # 0-no mom, 1-polyak, 2-nestrov          
+                            "mom_type"                          : 1,                   # 0-no mom, 1-polyak, 2-nestrov          
                             "learning_rate"                     : (0.001,0.0001, 0.01 ),  # (initial_learning_rate, ft_learning_rate, annealing)
                             "reg"                               : (0.000,0.0000),       # l1_coeff, l2_coeff                                
-                            "optim_type"                        : 1,                   # 0-SGD, 1-Adagrad, 2-RmsProp, 3-Adam
-                            "objective"                         : 0,                   # 0-negative log likelihood, 1-categorical cross entropy, 2-binary cross entropy
+                            "optim_type"                        : 2,                   # 0-SGD, 1-Adagrad, 2-RmsProp, 3-Adam
+                            "objective"                         : 1,                   # 0-negative log likelihood, 1-categorical cross entropy, 2-binary cross entropy
                          }        
 
     parent_arch_params = {                    
-                            "outs"        : 102 
-                            # The other params come from the VGG network.
+                    "mlp_activations"                   : [ ReLU,   ReLU,   Softmax ],
+                    "cnn_dropout"                       : False,
+                    "mlp_dropout"                       : True,
+                    "mlp_dropout_rates"                 : [ 0.5,    0.5,    0.5],
+                    "mlp_maxout"                        : [ 1,      1,           ],                    
+                    "num_nodes"                         : [ 800,   800           ],                                     
+                    "outs"                              : 100,  
+                    "mlp_batch_norm"                    : [ True ],                                                                                                                                                 
+                    "svm_flag"                          : False,                                       
+                    "cnn_activations"                   : [ ReLU,   ReLU,        ],             
+                    "cnn_batch_norm"                    : [ True ],
+                    "nkerns"                            : [  20,    50,          ],              
+                    "filter_size"                       : [ (5,5),  (3,3),       ],
+                    "pooling_size"                      : [ (2,2),  (2,2),       ],
+                    "conv_pad"                          : [ 2,      0,           ],                            
+                    "pooling_type"                      : [ 1,      1,           ],
+                    "maxrandpool_p"                     : [ 1,      1,           ],                           
+                    "conv_stride_size"                  : [ (1,1),  (1,1),       ],
+                    "cnn_maxout"                        : [ 1,      1,           ],                    
+                    "cnn_dropout_rates"                 : [ 0,      0,           ],
+                    "mean_subtract"                     : True,
+                    "use_bias"                          : True,
+                    "max_out"                           : 0 
                          }                          
     
     child_optimization_params = {
-               
-                            "mom"                         	    : (0.5, 0.95, 30),      # (mom_start, momentum_end, momentum_interval)                     
-                            "mom_type"                          : 1,                    # 0-no mom, 1-polyak, 2-nestrov          
-                            "learning_rate"                     : (0.001,0.0001, 0.01 ), # (initial_learning_rate, ft_learning_rate, annealing)
-                            "reg"                               : (0.00001,0.00001),    # l1_coeff, l2_coeff                                
-                            "optim_type"                        : 1,                   # 0-SGD, 1-Adagrad, 2-RmsProp, 3-Adam
-                            "objective"                         : 1,                   # 0-negative log likelihood, 1-categorical cross entropy, 2-binary cross entropy                              
-                                }  
-                                
+                            "mom"                         	    : (0.5, 0.9, 50),    # (mom_start, momentum_end, momentum_interval)                     
+                            "mom_type"                          : 1,                   # 0-no mom, 1-polyak, 2-nestrov          
+                            "learning_rate"                     : (0.01, 0.001, 0.01 ),  # (initial_learning_rate, ft_learning_rate, annealing)
+                            "reg"                               : (0.000,0.0000),       # l1_coeff, l2_coeff                                
+                            "optim_type"                        : 2,                   # 0-SGD, 1-Adagrad, 2-RmsProp, 3-Adam
+                            "objective"                         : 1,                   # 0-negative log likelihood, 1-categorical cross entropy, 2-binary cross entropy
+                         }
+          
     solo_optimization_params = {
-               
-                            "mom"                         	    : (0.5, 0.95, 30),      # (mom_start, momentum_end, momentum_interval)                     
-                            "mom_type"                          : 1,                    # 0-no mom, 1-polyak, 2-nestrov          
-                            "learning_rate"                     : (0.001,0.0001, 0.01 ), # (initial_learning_rate, ft_learning_rate, annealing)
-                            "reg"                               : (0.00001,0.00001),    # l1_coeff, l2_coeff                                
-                            "optim_type"                        : 1,                   # 0-SGD, 1-Adagrad, 2-RmsProp, 3-Adam
-                            "objective"                         : 1,                   # 0-negative log likelihood, 1-categorical cross entropy, 2-binary cross entropy                              
-                                }  
-                                                            
+                            "mom"                         	    : (0.5, 0.9, 50),    # (mom_start, momentum_end, momentum_interval)                     
+                            "mom_type"                          : 1,                   # 0-no mom, 1-polyak, 2-nestrov          
+                            "learning_rate"                     : (0.0001,0.00001, 0.01 ),  # (initial_learning_rate, ft_learning_rate, annealing)
+                            "reg"                               : (0.000,0.0000),       # l1_coeff, l2_coeff                                
+                            "optim_type"                        : 2,                   # 0-SGD, 1-Adagrad, 2-RmsProp, 3-Adam
+                            "objective"                         : 1,                   # 0-negative log likelihood, 1-categorical cross entropy, 2-binary cross entropy
+                         }                                                     
                             
     child_arch_params = {
                     
@@ -218,22 +252,22 @@ if __name__ == '__main__':
                     "cnn_dropout"                       : False,
                     "mlp_dropout"                       : True,
                     "mlp_dropout_rates"                 : [ 0.5,    0.5,    0.5],
-                    "num_nodes"                         : [ 4096,   4096 ],                                     
-                    "outs"                              : 102,  
+                    "mlp_maxout"                        : [ 1,      1      ],                    
+                    "num_nodes"                         : [ 800,   800 ],                                     
+                    "outs"                              : 10,  
                     "mlp_batch_norm"                    : [ True ],                                                                                                                                                 
                     "svm_flag"                          : False,                                       
-                    "cnn_activations"                   : [ ReLU,   ReLU,   ReLU,   ReLU,   ReLU,   ReLU,   ReLU    ],             
-                    "cnn_batch_norm"                    : [ True ],
-                    "nkerns"                            : [  64,    128,    256,    512,    512,    512,    512     ],              
-                    "filter_size"                       : [ (3,3),  (3,3),  (3,3),  (3,3),  (3,3),  (3,3),  (3,3)   ],
-                    "pooling_size"                      : [ (1,1),  (2,2),  (2,2),  (2,2),  (1,1),  (2,2),  (2,2)   ],
-                    "conv_pad"                          : [ 2,      0,      0,      0,      0,      0,      0,      ],                            
-                    "pooling_type"                      : [ 1,      1,      1,      1,      1,      1,      1,      ],
-                    "maxrandpool_p"                     : [ 1,      1,      1,      1,      1,      1,      1,      ],                           
-                    "conv_stride_size"                  : [ (1,1),  (1,1),  (1,1),  (1,1),  (1,1),  (1,1),  (1,1)   ],
-                    "cnn_maxout"                        : [ 1,      1,      1,      1,      1,      1,      1,      ],                    
-                    "mlp_maxout"                        : [ 1,      1,      1,      1,      1,      1,      1,      ],
-                    "cnn_dropout_rates"                 : [ 0,      0,      0,      0,      0,      0,      0,      ],
+                    "cnn_activations"                   : [   ReLU ],             
+                    "cnn_batch_norm"                    : [   True ],
+                    "nkerns"                            : [   20   ],              
+                    "filter_size"                       : [  (5,5) ],
+                    "pooling_size"                      : [  (2,2) ],
+                    "conv_pad"                          : [   2    ],                            
+                    "pooling_type"                      : [   1    ],
+                    "maxrandpool_p"                     : [   1    ],                           
+                    "conv_stride_size"                  : [  (1,1) ],
+                    "cnn_maxout"                        : [   1    ],                    
+                    "cnn_dropout_rates"                 : [   0    ],
                     "mean_subtract"                     : True,
                     "use_bias"                          : True,
                     "max_out"                           : 0 
@@ -241,10 +275,10 @@ if __name__ == '__main__':
                  
     joint_params  =  {                  
         
-                    "learn_layers"                      : [ (0,0), (16,7), (17,8) ],       # 0 is the first layer
+                    "learn_layers"                      : [ (0,0), (2,1), (3,2) ],       # 0 is the first layer
                     "learn_layers_coeffs"               : [ 
-                                                            (4,0.01,50),        # This is probes
-                                                            (0,0,100),          # This is soft outputs
+                                                            (2,0.1,50),        # This is probes
+                                                            (1,0,50),          # This is soft outputs
                                                             (1,1,1)             # this is for hard labels
                                                           ],
                                                         # weights for each probes and soft outputs and labels
@@ -259,14 +293,14 @@ if __name__ == '__main__':
     # other loose parameters.     
     parent_n_epochs = 75
     parent_validate_after_epochs = 1
-    parent_ft_epochs = 0
+    parent_ft_epochs = 75
     child_n_epochs = parent_n_epochs
     child_validate_after_epochs = parent_validate_after_epochs
     child_ft_epochs = parent_ft_epochs
         
     verbose = False  
-    parent_dataset = "_datasets/_dataset_68352"
-    child_dataset = "_datasets/_dataset_68352"
+    parent_dataset = "_datasets/_dataset_63800"
+    child_dataset = "_datasets/_dataset_96736"
 
     # Don't edit            
     parent_params  =  {
@@ -295,6 +329,15 @@ if __name__ == '__main__':
                         "network_save_name"     : "../results/solo_network.pkl "
                     }                                     
     
+    regularized_train (   
+                            parent_params = parent_params,
+                            child_params = child_params, 
+                            joint_params = joint_params,
+                            visual_params = visual_params,
+                            dataset = (parent_dataset, child_dataset),
+                            verbose = verbose
+                    ) 
+                         
     solo(
                     arch_params             = child_arch_params,
                     optimization_params     = solo_optimization_params,
@@ -307,14 +350,5 @@ if __name__ == '__main__':
                     verbose                 = verbose                                                
                 )
      
-    
-    regularized_train (   
-                            parent_params = parent_params,
-                            child_params = child_params, 
-                            joint_params = joint_params,
-                            visual_params = visual_params,
-                            dataset = (parent_dataset, child_dataset),
-                            verbose = verbose
-                    ) 
-                                                                    
+                                                                        
     pdb.set_trace()

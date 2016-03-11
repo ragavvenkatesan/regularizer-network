@@ -27,32 +27,59 @@ def rmse ( a,  b ):
     return T.sqrt(T.mean((a - b) ** 2 ))
                     
 class regularizer_net(cnn_mlp):  
-                                            
-    def build_probes(self, parent, joint_params, verbose = True):
 
+    def __init__ (   self, filename_params, 
+                         optimization_params,
+                         arch_params,   
+                         retrain_params,
+                         init_params,     
+                         parent,       
+                         joint_params,          
+                         verbose = False):
+                         
+        super(regularizer_net, self).__init__ ( filename_params = filename_params,
+                                                optimization_params = optimization_params,
+                                                arch_params = arch_params,
+                                                retrain_params = retrain_params,
+                                                init_params = init_params,                                                
+                                                verbose = verbose,                                        
+                                                )
+        self.parent = parent
         self.learn_layers            = joint_params [ "learn_layers" ]
-        probe_coeffs                 = joint_params [ "learn_layers_coeffs" ][0]
-        soft_output_coeffs           = joint_params [ "learn_layers_coeffs" ][1]
-        hard_output_coeffs           = joint_params [ "learn_layers_coeffs" ][2]
+        self.probe_coeffs                 = joint_params [ "learn_layers_coeffs" ][0]
+        self.soft_output_coeffs           = joint_params [ "learn_layers_coeffs" ][1]
+        self.hard_output_coeffs           = joint_params [ "learn_layers_coeffs" ][2]
         self.error                   = joint_params [ "error" ]
-        self.print_probe_costs       = joint_params [ "print_probe_costs" ] 
+        self.print_probe_costs       = joint_params [ "print_probe_costs" ]         
+        
+    def reset_params (self, params, verbose = True):
+        self.init_params = params
+        self.retrain_params = {
+                                "copy_from_old"     : [True] * (len(self.nkerns) + len(self.num_nodes) + 1),
+                                "freeze"            : [False] * (len(self.nkerns) + len(self.num_nodes) + 1)
+                                } 
+        self.build_network(verbose = verbose)
+        self.build_probes(verbose = verbose)
+        
+        
+    def build_probes(self, verbose = True):
         
         start_time = time.clock()
         self.build_cost_function(verbose =verbose)                                                                     
         epoch = theano.shared(numpy.asarray(1, dtype = theano.config.floatX))
         
         index = T.lscalar('index')
-        probe_weight = ifelse(epoch <= probe_coeffs[2],
-            probe_coeffs[0]*(1.0 - epoch/probe_coeffs[2]) + probe_coeffs[1]*(epoch/probe_coeffs[2]),
-            float(probe_coeffs[1]))        
+        probe_weight = ifelse(epoch <= self.probe_coeffs[2],
+            self.probe_coeffs[0]*(1.0 - epoch/self.probe_coeffs[2]) + self.probe_coeffs[1]*(epoch/self.probe_coeffs[2]),
+            float(self.probe_coeffs[1]))        
         
-        soft_weight = ifelse(epoch <= soft_output_coeffs[2],
-            soft_output_coeffs[0]*(1.0 - epoch/soft_output_coeffs[2]) + soft_output_coeffs[1]*(epoch/soft_output_coeffs[2]),
-            float(soft_output_coeffs[1]))
+        soft_weight = ifelse(epoch <= self.soft_output_coeffs[2],
+            self.soft_output_coeffs[0]*(1.0 - epoch/self.soft_output_coeffs[2]) + self.soft_output_coeffs[1]*(epoch/self.soft_output_coeffs[2]),
+            float(self.soft_output_coeffs[1]))
             
-        hard_weight = ifelse(epoch <= hard_output_coeffs[2],
-            hard_output_coeffs[0]*(1.0 - epoch/hard_output_coeffs[2]) + hard_output_coeffs[1]*(epoch/hard_output_coeffs[2]),
-            float(hard_output_coeffs[1]))   
+        hard_weight = ifelse(epoch <= self.hard_output_coeffs[2],
+            self.hard_output_coeffs[0]*(1.0 - epoch/self.hard_output_coeffs[2]) + self.hard_output_coeffs[1]*(epoch/self.hard_output_coeffs[2]),
+            float(self.hard_output_coeffs[1]))   
                     
         print 'building the probes'
         # setup child soft loss function
@@ -60,23 +87,23 @@ class regularizer_net(cnn_mlp):
 
                  
         if not soft_weight == 0:
-            if parent.svm_flag or self.svm_flag is True:
-                soft_output_cost = self.error(self.MLPlayers.layers[-1].ouput, parent.MLPlayers.layers[-1].output)
-                soft_dropout_output_cost =  self.error(self.MLPlayers.dropout_layers[-1].ouput, parent.MLPlayers.dropout_layers[-1].output)    
+            if self.parent.svm_flag or self.svm_flag is True:
+                soft_output_cost = self.error(self.MLPlayers.layers[-1].ouput, self.parent.MLPlayers.layers[-1].output)
+                soft_dropout_output_cost =  self.error(self.MLPlayers.dropout_layers[-1].ouput, self.parent.MLPlayers.dropout_layers[-1].output)    
                         
             else:
-                soft_output_cost = self.error(self.MLPlayers.layers[-1].p_y_given_x, parent.MLPlayers.layers[-1].p_y_given_x) 
-                soft_dropout_output_cost = self.error(self.MLPlayers.dropout_layers[-1].p_y_given_x, parent.MLPlayers.dropout_layers[-1].p_y_given_x)             
+                soft_output_cost = self.error(self.MLPlayers.layers[-1].p_y_given_x, self.parent.MLPlayers.layers[-1].p_y_given_x) 
+                soft_dropout_output_cost = self.error(self.MLPlayers.dropout_layers[-1].p_y_given_x, self.parent.MLPlayers.dropout_layers[-1].p_y_given_x)             
                 
             soft_output =  soft_dropout_output_cost if self.mlp_dropout else soft_output_cost                                           
         else:
             soft_output = 0.    
         count = 0 
         
-        if not parent.nkerns == []:
-            parent_layers = parent.ConvLayers.conv_layers + parent.MLPlayers.layers
+        if not self.parent.nkerns == []:
+            parent_layers = self.parent.ConvLayers.conv_layers + self.parent.MLPlayers.layers
         else:
-            parent_layers = parent.MLPlayers.layers
+            parent_layers = self.parent.MLPlayers.layers
             
         if not self.nkerns == []:    
             child_layers = self.ConvLayers.conv_layers + self.MLPlayers.layers
@@ -109,7 +136,7 @@ class regularizer_net(cnn_mlp):
         self.soft_output_cost = soft_output
         self.obj_cost = child_cost        
                                                                             
-        assert self.batch_size == parent.batch_size
+        assert self.batch_size == self.parent.batch_size
         
         self.test_model = theano.function(
                 inputs = [index],
@@ -173,8 +200,8 @@ class regularizer_net(cnn_mlp):
                             givens={
                                 self.x: self.train_set_x[index * self.batch_size:(index + 1) * self.batch_size],
                                 self.y: self.train_set_y[index * self.batch_size:(index + 1) * self.batch_size],
-                                parent.x: self.train_set_x[index * self.batch_size:(index + 1) * self.batch_size],
-                                parent.y: self.train_set_y[index * self.batch_size:(index + 1) * self.batch_size]},
+                                self.parent.x: self.train_set_x[index * self.batch_size:(index + 1) * self.batch_size],
+                                self.parent.y: self.train_set_y[index * self.batch_size:(index + 1) * self.batch_size]},
                             on_unused_input = 'ignore'
                                 )
                 else:
@@ -184,8 +211,8 @@ class regularizer_net(cnn_mlp):
                             givens={
                                 self.x: self.train_set_x[index * self.batch_size:(index + 1) * self.batch_size],
                                 self.y1: self.train_set_y1[index * self.batch_size:(index + 1) * self.batch_size],
-                                parent.x: self.train_set_x[index * self.batch_size:(index + 1) * self.batch_size],
-                                parent.y1: self.train_set_y1[index * self.batch_size:(index + 1) * self.batch_size]},
+                                self.parent.x: self.train_set_x[index * self.batch_size:(index + 1) * self.batch_size],
+                                self.parent.y1: self.train_set_y1[index * self.batch_size:(index + 1) * self.batch_size]},
                             on_unused_input = 'ignore'
                                 )
             self.probe_weight = theano.function ( 
@@ -210,8 +237,8 @@ class regularizer_net(cnn_mlp):
                     givens={
                         self.x: self.train_set_x[index * self.batch_size:(index + 1) * self.batch_size],
                         self.y1: self.train_set_y1[index * self.batch_size:(index + 1) * self.batch_size],
-                        parent.x: self.train_set_x[index * self.batch_size:(index + 1) * self.batch_size],
-                        parent.y1: self.train_set_y1[index * self.batch_size:(index + 1) * self.batch_size]},                                                            
+                        self.parent.x: self.train_set_x[index * self.batch_size:(index + 1) * self.batch_size],
+                        self.parent.y1: self.train_set_y1[index * self.batch_size:(index + 1) * self.batch_size]},                                                            
                     on_unused_input = 'ignore'                    
                         )
         else: 
@@ -222,8 +249,8 @@ class regularizer_net(cnn_mlp):
                     givens={
                         self.x: self.train_set_x[index * self.batch_size:(index + 1) * self.batch_size],
                         self.y: self.train_set_y[index * self.batch_size:(index + 1) * self.batch_size],
-                        parent.x: self.train_set_x[index * self.batch_size:(index + 1) * self.batch_size],
-                        parent.y: self.train_set_y[index * self.batch_size:(index + 1) * self.batch_size]},                    
+                        self.parent.x: self.train_set_x[index * self.batch_size:(index + 1) * self.batch_size],
+                        self.parent.y: self.train_set_y[index * self.batch_size:(index + 1) * self.batch_size]},                    
                     on_unused_input='ignore'                    
                         )      
                         
@@ -265,7 +292,10 @@ class regularizer_net(cnn_mlp):
                         ' probe cost estimation ', 
                         ' ', progressbar.Percentage(), \
                         ' ',progressbar.ETA(), \
-                        ]).start()             
+                        ]).start()    
+                probe_cost = []
+                soft_label_cost = []
+                label_cost = []                                  
                 for i in xrange(self.n_train_batches):
                     _probe, _soft_label, _label = self.probe_cost_fn(i, epoch) 
                     probe_cost = probe_cost + [_probe]
@@ -283,7 +313,7 @@ class regularizer_net(cnn_mlp):
             f.close()
             
             f = open(self.error_file_name,'a')
-            f.write(str(numpy.sum(probe_cost))  + "\t" + str(numpy.sum(soft_label_cost)) + "\t" + str(numpy.sum(label_cost)))
+            f.write("\t" + str(numpy.sum(probe_cost))  + "\t" + str(numpy.sum(soft_label_cost)) + "\t" + str(numpy.sum(label_cost)))
             f.close()
                     
     def test(self, verbose = True):
@@ -310,6 +340,9 @@ class regularizer_net(cnn_mlp):
                     bar.update(batch + 1)                                        
                 bar.finish()
             else:
+                probe_cost = []
+                soft_label_cost = []
+                label_cost = []             
                 bar = progressbar.ProgressBar(maxval=self.n_train_batches, \
                         widgets=[progressbar.AnimatedMarker(), \
                         ' probe cost estimation ', 
@@ -317,17 +350,17 @@ class regularizer_net(cnn_mlp):
                         ' ',progressbar.ETA(), \
                         ]).start()             
                 for i in xrange(self.n_train_batches):
-                    _probe, _soft_label, _label = self.probe_cost_fn(i, epoch) 
+                    _probe, _soft_label, _label = self.probe_cost_fn(i, 0) 
                     probe_cost = probe_cost + [_probe]
                     soft_label_cost = soft_label_cost + [_soft_label]
                     label_cost = label_cost + [_label]           
                     bar.update(i + 1)                                        
                 bar.finish()         
             f = open('dump.txt', 'a')                                  
-            print "   cost of probes      : " + str(numpy.mean(probe_cost)) + ", weight    : " + str(self.probe_weight(epoch))
-            print "   cost of soft labels : " + str(numpy.mean(soft_label_cost))  + ", weight    : " + str(self.soft_weight(epoch))
-            print "   cost of hard labels : " + str(numpy.mean(label_cost)) + ", weight    : " + str(self.hard_weight(epoch))
-            f.write( "   cost of probes      : " + str(numpy.mean(probe_cost)) + ", weight    : " + str(self.probe_weight(epoch)) + "\n")
-            f.write( "   cost of soft labels : " + str(numpy.mean(soft_label_cost))  + ", weight    : " + str(self.soft_weight(epoch)) + "\n")
-            f.write( "   cost of hard labels : " + str(numpy.mean(label_cost)) + ", weight    : " + str(self.hard_weight(epoch)) + "\n")
+            print "   cost of probes      : " + str(numpy.mean(probe_cost)) 
+            print "   cost of soft labels : " + str(numpy.mean(soft_label_cost)) 
+            print "   cost of hard labels : " + str(numpy.mean(label_cost))
+            f.write( "   cost of probes      : " + str(numpy.mean(probe_cost)) + "\n")
+            f.write( "   cost of soft labels : " + str(numpy.mean(soft_label_cost))  + "\n")
+            f.write( "   cost of hard labels : " + str(numpy.mean(label_cost)) + "\n")
             f.close()
