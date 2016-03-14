@@ -52,9 +52,10 @@ class regularizer_net(cnn_mlp):
         self.error                   = joint_params [ "error" ]
         self.print_probe_costs       = joint_params [ "print_probe_costs" ]         
         
-    def reset_params (self, params, verbose = True):
-        self.init_params = params
-        self.retrain_params = {
+    def reset_params (self, init_params, verbose = True):
+        self.init_params = init_params
+        if self.retrain_params is None:
+            self.retrain_params = {
                                 "copy_from_old"     : [True] * (len(self.nkerns) + len(self.num_nodes) + 1),
                                 "freeze"            : [False] * (len(self.nkerns) + len(self.num_nodes) + 1)
                                 } 
@@ -115,12 +116,28 @@ class regularizer_net(cnn_mlp):
             probe_cost =  probe_cost + self.error ( parent_layers[probe[0]].output, child_layers[probe[1]].output )
             count = count + 1 
             
-        child_cost =  soft_weight * soft_output  + \
-                      probe_weight * probe_cost + \
-                      hard_weight * self.output  
-                                     
+        remove_last_layer_vote = 2   
+        if verbose is True:
+            print "adding probe weights"    
+        child_cost =  probe_weight * probe_cost
+        if not ( self.soft_output_coeffs[0] == 0  and self.soft_output_coeffs[1] ==0) :
+            if verbose is True:
+                print "adding soft label loss"
+            child_cost = child_cost + soft_weight * soft_output
+            remove_last_layer_vote = remove_last_layer_vote - 1
+        if not ( self.hard_output_coeffs[0] == 0  and self.hard_output_coeffs[1] ==0) :        
+            if verbose is True:
+                print "adding hard label loss"
+            child_cost = child_cost + hard_weight * self.output  
+            remove_last_layer_vote = remove_last_layer_vote - 1
+            
+        if remove_last_layer_vote == 2:
+            if verbose is True:
+                print "going to unsupevised mentoring mode"
+            self.learnable_params = self.learnable_params[:-2]
+  
         child_optimizer =  optimizer(     
-                                        params = self.params,
+                                        params = self.learnable_params,
                                         objective = child_cost,
                                         optimization_params = self.optim_params,
                                         verbose = verbose
